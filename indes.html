@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>퀴즈 관리 시스템</title>
     <style>
         body {
@@ -9,25 +10,71 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f5f5f5;
         }
         .container {
-            border: 1px solid #ccc;
+            background-color: white;
+            border: 1px solid #ddd;
             padding: 20px;
             margin-bottom: 20px;
-            border-radius: 5px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .controls {
             margin-top: 20px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
         }
         button {
-            padding: 10px;
+            padding: 10px 15px;
             margin: 5px;
             cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
         input, textarea {
             width: 100%;
             padding: 10px;
             margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+        .edit-btn {
+            background-color: #28a745;
+        }
+        .edit-btn:hover {
+            background-color: #218838;
         }
     </style>
 </head>
@@ -37,23 +84,24 @@
         
         <div id="questionContainer">
             <h2>현재 문제</h2>
-            <div id="currentQuestionDisplay"></div>
+            <div class="status" id="currentQuestionDisplay"></div>
         </div>
 
         <div class="controls">
             <h2>문제 관리</h2>
             <div>
                 <label for="questionText">문제 내용:</label>
-                <textarea id="questionText" rows="4"></textarea>
+                <textarea id="questionText" rows="4" placeholder="여기에 문제 내용을 입력하세요..."></textarea>
             </div>
             <div>
                 <button onclick="addQuestion()">새 문제 추가</button>
-                <button onclick="editCurrentQuestion()">현재 문제 수정</button>
-                <button onclick="deleteCurrentQuestion()">현재 문제 삭제</button>
+                <button onclick="editCurrentQuestion()" class="edit-btn">현재 문제 수정</button>
+                <button onclick="deleteCurrentQuestion()" class="delete-btn">현재 문제 삭제</button>
             </div>
-            <div>
-                <button onclick="previousQuestion()">이전 문제</button>
-                <button onclick="nextQuestion()">다음 문제</button>
+            <div class="navigation">
+                <button onclick="previousQuestion()" id="prevBtn">이전 문제</button>
+                <span id="questionCounter"></span>
+                <button onclick="nextQuestion()" id="nextBtn">다음 문제</button>
             </div>
         </div>
     </div>
@@ -67,6 +115,7 @@
         function saveQuestions() {
             localStorage.setItem('quizQuestions', JSON.stringify(questions));
             localStorage.setItem('currentQuestionIndex', currentQuestion);
+            updateNavigationButtons();
         }
 
         function loadQuestions() {
@@ -77,20 +126,33 @@
                 questions = JSON.parse(savedQuestions);
                 currentQuestion = savedIndex ? parseInt(savedIndex) : 0;
                 displayQuestion(currentQuestion);
+                updateNavigationButtons();
             }
         }
 
         // 문제 표시 함수
         function displayQuestion(index) {
             const display = document.getElementById('currentQuestionDisplay');
+            const counter = document.getElementById('questionCounter');
+            
             if (questions.length > 0) {
                 display.innerHTML = `
                     <p><strong>문제 ${index + 1}/${questions.length}</strong></p>
                     <p>${questions[index].question}</p>
                 `;
+                counter.textContent = `${index + 1} / ${questions.length}`;
+                document.getElementById('questionText').value = questions[index].question;
             } else {
                 display.innerHTML = '<p>등록된 문제가 없습니다.</p>';
+                counter.textContent = '0 / 0';
+                document.getElementById('questionText').value = '';
             }
+        }
+
+        // 네비게이션 버튼 상태 업데이트
+        function updateNavigationButtons() {
+            document.getElementById('prevBtn').disabled = currentQuestion <= 0;
+            document.getElementById('nextBtn').disabled = currentQuestion >= questions.length - 1;
         }
 
         // 입력 필드 초기화
@@ -107,7 +169,8 @@
             }
 
             const newQuestion = {
-                question: questionText
+                question: questionText,
+                createdAt: new Date().toISOString()
             };
 
             questions.push(newQuestion);
@@ -132,11 +195,12 @@
                 }
 
                 questions[currentQuestion] = {
-                    question: questionText
+                    ...questions[currentQuestion],
+                    question: questionText,
+                    updatedAt: new Date().toISOString()
                 };
                 
                 displayQuestion(currentQuestion);
-                clearAdminInputs();
                 saveQuestions();
                 alert('문제가 수정되었습니다.');
             }
