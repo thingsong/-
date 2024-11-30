@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>학습 퀴즈 시스템</title>
+    <style>
+        body {
+            font-family: 'Nanum Gothic', sans-serif;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 5px;
+        }
+        .quiz-container {
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .question {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        .options {
+            display: grid;
+            gap: 10px;
+        }
+        .option {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .option:hover {
+            background-color: #e3f2fd;
+            border-color: #90caf9;
+        }
+        .feedback {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .correct {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .admin-panel {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .admin-input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .login-form {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #password {
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .question-counter {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>학습 퀴즈 시스템</h1>
+        </div>
+        
+        <div class="login-form">
+            <input type="password" id="password" placeholder="관리자 비밀번호">
+            <button onclick="checkPassword()" class="button">관리자 로그인</button>
+        </div>
+
+        <div class="question-counter" id="questionCounter"></div>
+
+        <div class="quiz-container">
+            <div class="question" id="question">문제가 여기에 표시됩니다</div>
+            <div class="options" id="options"></div>
+            <div class="feedback" id="feedback"></div>
+        </div>
+
+        <div id="adminPanel" class="admin-panel">
+            <h2>관리자 패널</h2>
+            <textarea class="admin-input" id="newQuestion" rows="3" placeholder="새로운 문제를 입력하세요"></textarea>
+            <input type="text" class="admin-input" id="option1" placeholder="보기 1">
+            <input type="text" class="admin-input" id="option2" placeholder="보기 2">
+            <input type="text" class="admin-input" id="option3" placeholder="보기 3">
+            <input type="text" class="admin-input" id="option4" placeholder="보기 4">
+            <input type="text" class="admin-input" id="correctAnswer" placeholder="정답 번호 입력 (1-4)">
+            <input type="text" class="admin-input" id="correctFeedback" placeholder="정답 피드백 (예: 잘했어요!)">
+            <input type="text" class="admin-input" id="incorrectFeedback" placeholder="오답 피드백 (예: 다시 한번 생각해보세요)">
+            <div style="margin-top: 10px;">
+                <button class="button" onclick="addQuestion()">문제 추가</button>
+                <button class="button" onclick="showNextQuestion()">다음 문제</button>
+                <button class="button" onclick="showPreviousQuestion()">이전 문제</button>
+                <button class="button" onclick="editCurrentQuestion()">현재 문제 수정</button>
+                <button class="button" onclick="deleteCurrentQuestion()" style="background-color: #dc3545;">현재 문제 삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const adminPassword = "1234"; // 관리자 비밀번호
+        let questions = [];
+        let currentQuestion = 0;
+
+        // localStorage에서 데이터 불러오기
+        function loadFromLocalStorage() {
+            const savedQuestions = localStorage.getItem('quizQuestions');
+            const savedCurrentQuestion = localStorage.getItem('currentQuestionIndex');
+            
+            if (savedQuestions) {
+                questions = JSON.parse(savedQuestions);
+            } else {
+                questions = [{
+                    question: "1 + 1 = ?",
+                    options: ["1", "2", "3", "4"],
+                    correctAnswer: "2",
+                    feedback: {
+                        correct: "정답입니다! 👏",
+                        incorrect: "다시 한번 생각해보세요 💭"
+                    }
+                }];
+            }
+            
+            currentQuestion = savedCurrentQuestion ? parseInt(savedCurrentQuestion) : 0;
+        }
+
+        // localStorage에 데이터 저장
+        function saveToLocalStorage() {
+            localStorage.setItem('quizQuestions', JSON.stringify(questions));
+            localStorage.setItem('currentQuestionIndex', currentQuestion);
+        }
+
+        function updateQuestionCounter() {
+            const counter = document.getElementById('questionCounter');
+            counter.textContent = `문제 ${currentQuestion + 1} / ${questions.length}`;
+        }
+
+        function checkPassword() {
+            const password = document.getElementById('password').value;
+            const adminPanel = document.getElementById('adminPanel');
+            if (password === adminPassword) {
+                adminPanel.style.display = 'block';
+                alert('관리자로 로그인되었습니다.');
+            } else {
+                alert('비밀번호가 틀렸습니다.');
+            }
+        }
+
+        function displayQuestion(index) {
+            const questionDiv = document.getElementById('question');
+            const optionsDiv = document.getElementById('options');
+            const feedback = document.getElementById('feedback');
+            const question = questions[index];
+            
+            questionDiv.textContent = `${index + 1}. ${question.question}`;
+            optionsDiv.innerHTML = '';
+            feedback.textContent = '';
+            feedback.className = 'feedback';
+            
+            question.options.forEach((option, i) => {
+                const button = document.createElement('button');
+                button.className = 'option';
+                button.textContent = `${i + 1}. ${option}`;
+                button.onclick = () => checkAnswer(String(i + 1));
+                optionsDiv.appendChild(button);
+            });
+
+            updateQuestionCounter();
+        }
+
+        function checkAnswer(selectedAnswer) {
+            const feedback = document.getElementById('feedback');
+            const question = questions[currentQuestion];
+            
+            if (selectedAnswer === question.correctAnswer) {
+                feedback.textContent = question.feedback.correct;
+                feedback.className = 'feedback correct';
+            } else {
+                feedback.textContent = question.feedback.incorrect;
+                feedback.className = 'feedback incorrect';
+            }
+        }
+
+        function addQuestion() {
+            const newQuestion = {
+                question: document.getElementById('newQuestion').value,
+                options: [
+                    document.getElementById('option1').value,
+                    document.getElementById('option2').value,
+                    document.getElementById('option3').value,
+                    document.getElementById('option4').value
+                ],
+                correctAnswer: document.getElementById('correctAnswer').value,
+                feedback: {
+                    correct: document.getElementById('correctFeedback').value || "정답입니다! 👏",
+                    incorrect: document.getElementById('incorrectFeedback').value || "다시 한번 생각해보세요 💭"
+                }
+            };
+            
+            questions.push(newQuestion);
+            currentQuestion = questions.length - 1;
+            displayQuestion(currentQuestion);
+            clearAdminInputs();
+            saveToLocalStorage();
+            alert('새로운 문제가 추가되었습니다.');
+        }
+
+        function clearAdminInputs() {
+            document.getElementById('newQuestion').value = '';
+            document.getElementById('option1').value = '';
+            document.getElementById('option2').value = '';
+            document.getElementById('option3').value = '';
+            document.getElementById('option4').value = '';
+            document.getElementById('correctAnswer').value = '';
+            document.getElementById('correctFeedback').value = '';
+            document.getElementById('incorrectFeedback').value = '';
+        }
+
+        function showNextQuestion() {
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                displayQuestion(currentQuestion);
+                saveToLocalStorage();
+            } else {
+                alert('마지막 문제입니다.');
+            }
+        }
+
+        function showPreviousQuestion() {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                displayQuestion(currentQuestion);
+                saveToLocalStorage();
+            } else {
+                alert('첫 번째 문제입니다.');
+            }
+        }
+
+        function editCurrentQuestion() {
+            const question = questions[currentQuestion];
+            document.getElementById('newQuestion').value = question.question;
+            document.getElementById('option1').value = question.options[0];
+            document.getElementById('option2').value = question.options[1];
+            document.getElementById('option3').value = question.options[2];
+            document.getElementById('option4').value = question.options[3];
+            document.getElementById('correctAnswer').value = question.correctAnswer;
+            document.getElementById('correctFeedback').value = question.feedback.correct;
+            document.getElementById('incorrectFeedback').value = question.feedback.incorrect;
+            
+            if (confirm('현재 문제를 수정하시겠습니까?')) {
+                questions[currentQuestion] = {
+                    question: document.getElementById('newQuestion').value,
+                    options: [
+                        document.getElementById('option1').value,
+                        document.getElementById('option2').value,
+                        document.getElementById('option3').value,
+                        document.getElementById('option4').value
+                    ],
+                    correctAnswer: document.getElementById('correctAnswer').value,
+                    feedback: {
+                        correct: document.getElementById('correctFeedback').value,
+                        incorrect: document.getElementById('incorrectFeedback').value
+                    }
+                };
+                displayQuestion(currentQuestion);
+                clearAdminInputs();
+                saveToLocalStorage();
+                alert('문제가 수정되었습니다.');
+            }
+        }
+
+        function deleteCurrentQuestion() {
+            if (confirm('현재 문제를 삭제하시겠습니까?')) {
+                questions.splice(currentQuestion, 1);
+                if (currentQuestion >= questions.length) {
+                    currentQuestion = questions.length - 1;
+                }
+                if (questions.length === 0) {
+                    questions = [{
+                        question: "문제를 추가해주세요",
+                        options: ["보기1", "보기2", "보기3", "보기4"],
+                        correctAnswer: "1",
+                        feedback: {
+                            correct: "정답입니다",
+                            incorrect: "틀렸습니다"
+                        }
+                    }];
+                    currentQuestion = 0;
+                }
+                displayQuestion(currentQuestion);
+                saveToLocalStorage();
+                alert('문제가 삭제되었습니다.');
+            }
+        }
+
+        // 페이지 로드 시 초기화
+        window.onload = function() {
+            loadFromLocalStorage();
+            displayQuestion(currentQuestion);
+        }
+    </script>
+</body>
+</html>
